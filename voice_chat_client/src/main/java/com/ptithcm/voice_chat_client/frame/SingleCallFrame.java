@@ -1,0 +1,228 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
+ */
+package com.ptithcm.voice_chat_client.frame;
+
+import com.ptithcm.voice_chat_client.enums.VoiceCallStatus;
+import com.ptithcm.voice_chat_client.models.ClientInfo;
+import com.ptithcm.voice_chat_client.models.Empty;
+import com.ptithcm.voice_chat_client.models.EventGeneric;
+import com.ptithcm.voice_chat_client.models.Fetch;
+import com.ptithcm.voice_chat_client.models.Packet;
+import com.ptithcm.voice_chat_client.models.Request;
+import com.ptithcm.voice_chat_client.models.UDPServerSocket;
+import com.ptithcm.voice_chat_client.models.VoiceCall;
+import com.ptithcm.voice_chat_client.models.VoiceCallControls;
+import com.ptithcm.voice_chat_client.store.CallStore;
+import com.ptithcm.voice_chat_client.store.SocketStore;
+import com.ptithcm.voice_chat_client.store.ThreadStore;
+import com.ptithcm.voice_chat_client.store.ViewStore;
+import com.ptithcm.voice_chat_client.ui.CallerCardUI;
+import java.net.DatagramSocket;
+import java.net.SocketException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.sound.sampled.LineUnavailableException;
+import javax.swing.JLabel;
+
+/**
+ *
+ * @author minhd
+ */
+public class SingleCallFrame extends javax.swing.JFrame {
+
+    private ClientInfo clientInfo;
+
+    /**
+     * Creates new form CallFrame
+     */
+    public SingleCallFrame(ClientInfo clientInfo) {
+        try {
+            initComponents();
+
+            this.clientInfo = clientInfo;
+
+            CallerCardUI callerCardUI = new CallerCardUI(clientInfo);
+            VoiceCallControls voiceCallControls = new VoiceCallControls(new UDPServerSocket(new DatagramSocket(1111), 1111));
+            CallStore.voiceCallControls = voiceCallControls;
+            callerCardUI.setVoiceCallControls(voiceCallControls);
+            pnlCard.add(callerCardUI);
+
+            SocketStore.tcpClientSocket.registerEvent(new EventGeneric<VoiceCall>(SocketStore.tcpClientSocket, VoiceCall.class)).on("Single-Voice-Call", (voiceCall) -> {
+                CallStore.voiceCall = voiceCall;
+                if (voiceCall.getStatus() == VoiceCallStatus.RINGING.getValue()) {
+                    lblVoiceCallStatus.setText("Đang đổ chuông...");
+                } else if (voiceCall.getStatus() == VoiceCallStatus.BUSY.getValue()) {
+                    lblVoiceCallStatus.setText("Máy đang bận...");
+                    ViewStore.chatFrame.setVisible(true);
+                    CallStore.voiceCallControls.end();
+                    dispose();
+                } else if (voiceCall.getStatus() == VoiceCallStatus.NOT_ANSWERING.getValue()) {
+//                    ThreadStore.endTask("Ringing");
+                    lblVoiceCallStatus.setText("Không trả lời...");
+                    ViewStore.chatFrame.setVisible(true);
+                    CallStore.voiceCallControls.end();
+                    dispose();
+                } else if (voiceCall.getStatus() == VoiceCallStatus.PROGRESS.getValue()) {
+                    ThreadStore.addTask("Call-Time", ThreadStore.executorService.submit(() -> {
+                        while (!Thread.interrupted()) {
+                            lblVoiceCallStatus.setText(new SimpleDateFormat("mm:ss").format(new Date(new Date().getTime() - voiceCall.getCallAnswerTime().getTime())));
+
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException ex) {
+                                Logger.getLogger(SingleCallFrame.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                        }
+                    }));
+
+                    try {
+                        callerCardUI.getVoiceCallControls().start();
+                    } catch (LineUnavailableException ex) {
+                        Logger.getLogger(SingleCallFrame.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                } else if (voiceCall.getStatus() == VoiceCallStatus.ENDED.getValue()) {
+                    ViewStore.chatFrame.setVisible(true);
+                    CallStore.voiceCallControls.end();
+                    dispose();
+                } else if (voiceCall.getStatus() == VoiceCallStatus.CANCEL.getValue()) {
+                    ViewStore.chatFrame.setVisible(true);
+                    CallStore.voiceCallControls.end();
+                    dispose();
+                }
+            });
+        } catch (SocketException ex) {
+            Logger.getLogger(SingleCallFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jPanel1 = new javax.swing.JPanel();
+        lblMicrophone = new javax.swing.JLabel();
+        lblSpeaker = new javax.swing.JLabel();
+        lblCancelCall = new javax.swing.JLabel();
+        pnlCard = new javax.swing.JPanel();
+        lblVoiceCallStatus = new javax.swing.JLabel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setPreferredSize(new java.awt.Dimension(500, 350));
+
+        jPanel1.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 20, 10));
+
+        lblMicrophone.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblMicrophone.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/_32x32/microphone-black-shape.png"))); // NOI18N
+        lblMicrophone.setPreferredSize(new java.awt.Dimension(48, 48));
+        lblMicrophone.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                lblMicrophoneMouseClicked(evt);
+            }
+        });
+        jPanel1.add(lblMicrophone);
+
+        lblSpeaker.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblSpeaker.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/_32x32/speaker-filled-audio-tool.png"))); // NOI18N
+        lblSpeaker.setPreferredSize(new java.awt.Dimension(48, 48));
+        lblSpeaker.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                lblSpeakerMouseClicked(evt);
+            }
+        });
+        jPanel1.add(lblSpeaker);
+
+        lblCancelCall.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblCancelCall.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/_32x32/phone.png"))); // NOI18N
+        lblCancelCall.setPreferredSize(new java.awt.Dimension(48, 48));
+        lblCancelCall.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                lblCancelCallMouseClicked(evt);
+            }
+        });
+        jPanel1.add(lblCancelCall);
+
+        getContentPane().add(jPanel1, java.awt.BorderLayout.PAGE_END);
+
+        pnlCard.setLayout(new java.awt.CardLayout());
+        getContentPane().add(pnlCard, java.awt.BorderLayout.CENTER);
+
+        lblVoiceCallStatus.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        lblVoiceCallStatus.setForeground(new java.awt.Color(51, 204, 0));
+        lblVoiceCallStatus.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblVoiceCallStatus.setText("Đang gọi...");
+        lblVoiceCallStatus.setPreferredSize(new java.awt.Dimension(73, 32));
+        getContentPane().add(lblVoiceCallStatus, java.awt.BorderLayout.NORTH);
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void lblCancelCallMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lblCancelCallMouseClicked
+        if (CallStore.voiceCall.getStatus() == VoiceCallStatus.RINGING.getValue()) {
+            CallStore.voiceCall.setStatus(VoiceCallStatus.CANCEL.getValue());
+            new Fetch<VoiceCall, Empty>(new Request(new Packet("Cancel-Call", CallStore.voiceCall)), Empty.class).async();
+            ViewStore.chatFrame.setVisible(true);
+            CallStore.voiceCallControls.end();
+            dispose();
+        } else if (CallStore.voiceCall.getStatus() == VoiceCallStatus.PROGRESS.getValue()) {
+            CallStore.voiceCall.setStatus(VoiceCallStatus.ENDED.getValue());
+            new Fetch<VoiceCall, Empty>(new Request(new Packet("End-Call", CallStore.voiceCall)), Empty.class).async();
+            ViewStore.chatFrame.setVisible(true);
+            CallStore.voiceCallControls.end();
+            dispose();
+        }
+    }//GEN-LAST:event_lblCancelCallMouseClicked
+
+    private void lblSpeakerMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lblSpeakerMouseClicked
+        try {
+            CallStore.voiceCallControls.getSound().toggleSpeaker();
+            if (!CallStore.voiceCallControls.getSound().getSourceDataLine().isOpen()) {
+                lblSpeaker.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/_32x32/mute_speaker.png")));
+            } else {
+                lblSpeaker.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/_32x32/speaker-filled-audio-tool.png")));
+            }
+        } catch (LineUnavailableException ex) {
+            Logger.getLogger(SingleCallFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_lblSpeakerMouseClicked
+
+    private void lblMicrophoneMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lblMicrophoneMouseClicked
+        try {
+            CallStore.voiceCallControls.getSound().toggleMicrophone();
+            if (!CallStore.voiceCallControls.getSound().getTargetDataLine().isOpen()) {
+                lblMicrophone.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/_32x32/mute.png")));
+            } else {
+                lblMicrophone.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icons/_32x32/microphone-black-shape.png")));
+            }
+            new Fetch(new Request(new Packet("Microphone-Status", CallStore.voiceCallControls.getSound().getTargetDataLine().isOpen())), Boolean.class).async();
+        } catch (LineUnavailableException ex) {
+            Logger.getLogger(SingleCallFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_lblMicrophoneMouseClicked
+
+//    Getters and setters
+    public JLabel getLblVoiceCallStatus() {
+        return lblVoiceCallStatus;
+    }
+
+    public void setLblVoiceCallStatus(JLabel lblVoiceCallStatus) {
+        this.lblVoiceCallStatus = lblVoiceCallStatus;
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JLabel lblCancelCall;
+    private javax.swing.JLabel lblMicrophone;
+    private javax.swing.JLabel lblSpeaker;
+    private javax.swing.JLabel lblVoiceCallStatus;
+    private javax.swing.JPanel pnlCard;
+    // End of variables declaration//GEN-END:variables
+}
